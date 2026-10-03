@@ -1,7 +1,7 @@
 import { Controller, Get, Headers, UnauthorizedException } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
 import { timingSafeEqual } from 'node:crypto';
+import { SkipRateLimit } from '../common/rate-limit.js';
 import { environment } from '../config/environment.js';
 import { Public } from '../modules/auth/auth.guard.js';
 import { RemindersGenerator } from './reminders.generator.js';
@@ -17,7 +17,7 @@ export class JobsController {
   constructor(private readonly reminders: RemindersGenerator) {}
 
   @Public()
-  @SkipThrottle()
+  @SkipRateLimit()
   @Get('reminders')
   async runReminders(@Headers('authorization') authorization?: string) {
     const expected = environment.cronSecret ? `Bearer ${environment.cronSecret}` : '';

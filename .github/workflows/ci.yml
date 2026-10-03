@@ -41,6 +41,8 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       - run: npm run build
+      # Vercel's runtime can't require() ES modules; fail here instead of in production.
+      - run: npm run check:serverless
 
   web:
     runs-on: ubuntu-latest

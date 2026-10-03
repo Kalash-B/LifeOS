@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator.js';
+import { RateLimit } from '../../common/rate-limit.js';
 import { ChangePasswordDto, DeleteAccountDto, UpdateProfileDto, UpdateSettingsDto } from './users.dto.js';
 import { UsersService } from './users.service.js';
 
@@ -31,20 +31,20 @@ export class UsersController {
     return this.users.updateSettings(user.id, dto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @RateLimit(5)
   @Post('password')
   @HttpCode(HttpStatus.OK)
   changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
     return this.users.changePassword(user.id, dto);
   }
 
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @RateLimit(3)
   @Get('export')
   exportData(@CurrentUser() user: AuthUser) {
     return this.users.exportData(user.id);
   }
 
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @RateLimit(3)
   @Delete()
   deleteAccount(@CurrentUser() user: AuthUser, @Body() dto: DeleteAccountDto) {
     return this.users.deleteAccount(user.id, dto.password);

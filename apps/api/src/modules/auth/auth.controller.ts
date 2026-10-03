@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator.js';
+import { RateLimit } from '../../common/rate-limit.js';
 import { environment } from '../../config/environment.js';
 import { LoginDto, RegisterDto } from './auth.dto.js';
 import { Public } from './auth.guard.js';
@@ -12,9 +12,9 @@ export const REFRESH_COOKIE = 'lifeos_rt';
 /** Non-secret marker readable by the web app's proxy for optimistic redirects. */
 export const SESSION_HINT_COOKIE = 'lifeos_session';
 
-const authLimit = { default: { limit: environment.authRateLimitPerMinute, ttl: 60_000 } };
+const authLimit = environment.authRateLimitPerMinute;
 // Refresh runs on every page load, so it gets a looser limit than credential checks.
-const refreshLimit = { default: { limit: Math.max(60, environment.authRateLimitPerMinute), ttl: 60_000 } };
+const refreshLimit = Math.max(60, environment.authRateLimitPerMinute);
 
 @ApiTags('auth')
 @Controller('auth')
@@ -22,14 +22,14 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
-  @Throttle(authLimit)
+  @RateLimit(authLimit)
   @Post('register')
   async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     return this.respond(res, await this.auth.register(dto, req.headers['user-agent']));
   }
 
   @Public()
-  @Throttle(authLimit)
+  @RateLimit(authLimit)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
@@ -37,7 +37,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(refreshLimit)
+  @RateLimit(refreshLimit)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {

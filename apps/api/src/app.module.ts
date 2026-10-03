@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller.js';
-import { ClientIpThrottlerGuard } from './common/client-ip.guard.js';
 import { DomainEventsModule } from './common/events/domain-events.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
+import { RateLimitGuard } from './common/rate-limit.js';
 import { UserClockModule } from './common/user-clock.service.js';
 import { environment } from './config/environment.js';
 import { JobsModule } from './jobs/jobs.module.js';
@@ -25,7 +24,6 @@ import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: environment.rateLimitPerMinute }]),
     PrismaModule,
     DomainEventsModule,
     UserClockModule,
@@ -45,7 +43,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
   controllers: [AppController],
   providers: [
     // Order matters: rate-limit first, then authenticate (deny by default).
-    { provide: APP_GUARD, useClass: ClientIpThrottlerGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

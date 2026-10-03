@@ -23,7 +23,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.mjs",
     "db:generate": "prisma generate",
-    "vercel-build": "prisma generate && sh scripts/migrate-and-seed.sh && nest build"
+    "vercel-build": "prisma generate && sh scripts/migrate-and-seed.sh && nest build",
+    "check:serverless": "node --no-experimental-require-module -e \"import('./api/index.js').then(() => console.log('serverless entry loads without require(esm)'))\""
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -32,7 +33,6 @@
     "@nestjs/passport": "^12.0.0",
     "@nestjs/platform-express": "^12.0.1",
     "@nestjs/swagger": "^12.0.2",
-    "@nestjs/throttler": "^6.7.1",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.3.11",
