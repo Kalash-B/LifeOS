@@ -3353,5 +3353,11 @@ documented here. Details live in `docs/`.
   closing the browser/app. Unchecked: browser-session cookie, server TTL 12 h. The choice is kept
   across token rotation, every refresh slides the window, and an open app renews its access
   token before expiry and on resume from background.
+- **Serverless hosting (Vercel)** — the API also runs as a Vercel Function: compiled with
+  `nest build` and served through a plain-JS entry (esbuild would drop NestJS decorator metadata).
+  The BullMQ worker is replaced there by Vercel Cron calling `GET /api/v1/jobs/reminders`
+  (secured with `CRON_SECRET`); the reminder generator is idempotent, so missed or duplicate
+  invocations are safe. The web proxy forwards the visitor IP with `PROXY_SECRET` so rate
+  limits stay per-visitor behind Vercel. See `docs/deploy-vercel.md`.
 - **Branding** — the full logo appears on a white tile (landing, sign-in) so it reads in both
   themes; a transparent leaf emblem cut from it is the small mark in navigation.

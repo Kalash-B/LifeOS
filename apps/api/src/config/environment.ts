@@ -31,6 +31,15 @@ export const environment = {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
+  /**
+   * Proxy hops in front of the API that append X-Forwarded-For (Nginx = 1).
+   * Rate limits key on the client IP, so this must match the deployment.
+   */
+  trustProxyHops: Number(process.env.TRUST_PROXY_HOPS ?? 1),
+  /** Shared with the web app; lets it forward the visitor's real IP for rate limiting. */
+  proxySecret: process.env.PROXY_SECRET ?? '',
+  /** Shared secret Vercel Cron sends as `Authorization: Bearer <CRON_SECRET>`. */
+  cronSecret: process.env.CRON_SECRET ?? '',
   /** Background jobs (reminders, dispatch) — disabled in tests. */
   jobsEnabled: (process.env.JOBS_ENABLED ?? (isTest ? 'false' : 'true')) === 'true',
   /** Global rate limit per IP per minute; auth routes are stricter. */

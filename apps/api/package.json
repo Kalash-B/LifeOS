@@ -22,7 +22,8 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.mjs",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "vercel-build": "prisma generate && sh scripts/migrate-and-seed.sh && nest build"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

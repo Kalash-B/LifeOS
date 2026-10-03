@@ -1,19 +1,10 @@
-import { NestFactory } from '@nestjs/core';
-import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module.js';
-import { configureApp } from './app.setup.js';
-import { JsonLogger } from './common/logging/json-logger.js';
+import { createApp } from './bootstrap.js';
 import { environment } from './config/environment.js';
 
+/** Long-running server (local dev, Docker). Vercel uses src/serverless.ts instead. */
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: environment.isProduction ? new JsonLogger() : undefined,
-  });
-  // Behind a reverse proxy (spec §36) the client IP comes from X-Forwarded-For; needed for rate limiting.
-  app.set('trust proxy', 1);
-  app.useBodyParser('json', { limit: '1mb' });
-  configureApp(app);
+  const app = await createApp();
 
   if (!environment.isProduction) {
     const config = new DocumentBuilder()

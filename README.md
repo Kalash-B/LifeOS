@@ -32,6 +32,11 @@ npm run dev                                # http://localhost:3000
 
 The web app proxies `/api/v1/*` to `API_URL` (default `http://localhost:4000`).
 
+## Deploy
+
+- **Vercel** (web + API + Neon Postgres): [docs/deploy-vercel.md](docs/deploy-vercel.md)
+- **Docker** (any VM / Render): below.
+
 ## Run the full stack in Docker
 
 ```bash
