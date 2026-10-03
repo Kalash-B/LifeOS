@@ -1,0 +1,630 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum RoutineLogStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  MISSED
+}
+
+enum HabitLogStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  MISSED
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKDAYS
+  WEEKLY
+}
+
+enum LearningStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum ProjectCategory {
+  PERSONAL
+  STARTUP
+  COLLEGE
+  FREELANCE
+  OTHER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  BLOCKED
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+}
+
+enum FinanceAccountType {
+  CASH
+  BANK
+  WALLET
+  OTHER
+}
+
+enum SavingsGoalStatus {
+  ACTIVE
+  ACHIEVED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+  CANCELLED
+}
+
+enum NotificationPriority {
+  CRITICAL
+  IMPORTANT
+  USEFUL
+  OPTIONAL
+}
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  status       String   @default("ACTIVE")
+  timezone     String   @default("UTC")
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile                 Profile?
+  settings                UserSettings?
+  sessions                Session[]
+  routines                Routine[]
+  routineLogs             RoutineLog[]
+  habits                  Habit[]
+  habitLogs               HabitLog[]
+  weightLogs              WeightLog[]
+  workouts                Workout[]
+  learningGoals           LearningGoal[]
+  learningSessions        LearningSession[]
+  projects                Project[]
+  tasks                   Task[]
+  financeAccounts         FinanceAccount[]
+  incomes                 Income[]
+  expenses                Expense[]
+  savingsGoals            SavingsGoal[]
+  investments             Investment[]
+  notificationPreferences NotificationPreference[]
+  notifications           Notification[]
+}
+
+model Profile {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @unique @db.Uuid
+  displayName       String?
+  avatarUrl         String?
+  bio               String?
+  dateOfBirth       DateTime?
+  preferredLanguage String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Per-user preferences: LifeOS score configuration (spec §20) and
+/// notification controls such as quiet hours and summaries (spec §49).
+model UserSettings {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @db.Uuid
+  scoreEnabled      Boolean  @default(true)
+  /// { routine, habits, fitness, learning, projects, finance } — weights summing to 100
+  scoreWeights      Json?
+  quietHoursStart   String?  @db.VarChar(5)
+  quietHoursEnd     String?  @db.VarChar(5)
+  dailySummary      Boolean  @default(true)
+  weeklySummary     Boolean  @default(true)
+  dailyStudyGoalMin Int      @default(60)
+  currency          String   @default("INR") @db.VarChar(3)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Refresh-token sessions. Only a SHA-256 hash of the token is stored; tokens
+/// are rotated on every refresh and revoked on logout.
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  /// "Keep me logged in": persistent cookie + long TTL; otherwise a browser-session cookie + short TTL
+  persistent Boolean   @default(true)
+  userAgent  String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Routine ────────────────────────────────────────────────────────────────
+
+model Routine {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineItems RoutineItem[]
+
+  @@index([userId])
+}
+
+model RoutineItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  routineId      String   @db.Uuid
+  title          String
+  description    String?
+  category       String?
+  /// Local time of day, "HH:mm", interpreted in the user's timezone
+  startTime      String?  @db.VarChar(5)
+  endTime        String?  @db.VarChar(5)
+  priority       Int?
+  /// DAILY | WEEKDAYS | WEEKENDS | WEEKLY:MO,WE,FR  (null = DAILY)
+  recurrenceRule String?
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  routine     Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  routineLogs RoutineLog[]
+
+  @@index([routineId])
+}
+
+model RoutineLog {
+  id            String           @id @default(uuid()) @db.Uuid
+  routineItemId String           @db.Uuid
+  userId        String           @db.Uuid
+  /// Local calendar date (user timezone), stored as midnight UTC
+  date          DateTime         @db.Date
+  status        RoutineLogStatus @default(PENDING)
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  routineItem RoutineItem @relation(fields: [routineItemId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([routineItemId, date])
+  @@index([userId, date])
+}
+
+// ─── Habits ─────────────────────────────────────────────────────────────────
+
+model Habit {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  name          String
+  description   String?
+  frequencyType HabitFrequency @default(DAILY)
+  /// For WEEKLY habits: completions required per week. Otherwise a daily amount.
+  targetValue   Float?
+  unit          String?
+  /// Local time of day, "HH:mm"
+  reminderTime  String?        @db.VarChar(5)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitLogs HabitLog[]
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id        String         @id @default(uuid()) @db.Uuid
+  habitId   String         @db.Uuid
+  userId    String         @db.Uuid
+  date      DateTime       @db.Date
+  status    HabitLogStatus @default(PENDING)
+  value     Float?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([userId, date])
+  @@index([habitId])
+}
+
+// ─── Fitness ────────────────────────────────────────────────────────────────
+
+model Exercise {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  muscleGroup String?
+  equipment   String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workoutExercises WorkoutExercise[]
+}
+
+model WeightLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  weight     Float
+  unit       String   @default("kg")
+  recordedAt DateTime @default(now())
+  notes      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, recordedAt])
+}
+
+model Workout {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  name      String
+  startedAt DateTime
+  endedAt   DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+
+  @@index([userId, startedAt])
+}
+
+model WorkoutExercise {
+  id         String  @id @default(uuid()) @db.Uuid
+  workoutId  String  @db.Uuid
+  exerciseId String  @db.Uuid
+  orderIndex Int
+  notes      String?
+
+  workout     Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  workoutSets WorkoutSet[]
+
+  @@unique([workoutId, orderIndex])
+  @@index([workoutId])
+  @@index([exerciseId])
+}
+
+model WorkoutSet {
+  id                String  @id @default(uuid()) @db.Uuid
+  workoutExerciseId String  @db.Uuid
+  setNumber         Int
+  weight            Float?
+  reps              Int?
+  duration          Int?
+  completed         Boolean @default(false)
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutExerciseId, setNumber])
+}
+
+// ─── Learning ───────────────────────────────────────────────────────────────
+
+model LearningGoal {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String         @db.Uuid
+  name        String
+  description String?
+  category    String
+  targetDate  DateTime?
+  status      LearningStatus @default(ACTIVE)
+  progress    Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics   LearningTopic[]
+  sessions LearningSession[]
+
+  @@index([userId])
+}
+
+model LearningTopic {
+  id             String         @id @default(uuid()) @db.Uuid
+  learningGoalId String         @db.Uuid
+  name           String
+  description    String?
+  status         LearningStatus @default(ACTIVE)
+  progress       Int            @default(0)
+  position       Int            @default(0)
+
+  learningGoal LearningGoal      @relation(fields: [learningGoalId], references: [id], onDelete: Cascade)
+  sessions     LearningSession[]
+
+  @@index([learningGoalId])
+}
+
+model LearningSession {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @db.Uuid
+  learningGoalId     String    @db.Uuid
+  learningTopicId    String?   @db.Uuid
+  startedAt          DateTime
+  endedAt            DateTime?
+  durationMinutes    Int?
+  productivityRating Int?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningGoal  LearningGoal   @relation(fields: [learningGoalId], references: [id], onDelete: Cascade)
+  learningTopic LearningTopic? @relation(fields: [learningTopicId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startedAt])
+  @@index([learningGoalId])
+}
+
+// ─── Projects ───────────────────────────────────────────────────────────────
+
+model Project {
+  id           String          @id @default(uuid()) @db.Uuid
+  userId       String          @db.Uuid
+  name         String
+  description  String?
+  category     ProjectCategory @default(PERSONAL)
+  status       ProjectStatus   @default(PLANNING)
+  priority     Priority?
+  startDate    DateTime?
+  deadline     DateTime?
+  progress     Int             @default(0)
+  /// When true, progress = completed_tasks / total_tasks (spec §56)
+  autoProgress Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+  milestones Milestone[]
+
+  @@index([userId])
+}
+
+model Task {
+  id          String     @id @default(uuid()) @db.Uuid
+  projectId   String     @db.Uuid
+  userId      String     @db.Uuid
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority?
+  dueDate     DateTime?
+  completedAt DateTime?
+  position    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId, status])
+  @@index([userId, dueDate])
+}
+
+model Milestone {
+  id          String          @id @default(uuid()) @db.Uuid
+  projectId   String          @db.Uuid
+  name        String
+  description String?
+  targetDate  DateTime?
+  status      MilestoneStatus @default(PLANNED)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ─── Finance ────────────────────────────────────────────────────────────────
+
+model FinanceAccount {
+  id             String             @id @default(uuid()) @db.Uuid
+  userId         String             @db.Uuid
+  name           String
+  type           FinanceAccountType @default(BANK)
+  currency       String             @default("INR") @db.VarChar(3)
+  /// Opening balance + incomes − expenses, maintained transactionally
+  currentBalance Decimal            @default(0) @db.Decimal(14, 2)
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomes  Income[]
+  expenses Expense[]
+
+  @@index([userId])
+}
+
+model Income {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  accountId   String   @db.Uuid
+  amount      Decimal  @db.Decimal(14, 2)
+  currency    String   @default("INR") @db.VarChar(3)
+  source      String
+  category    String
+  incomeDate  DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, incomeDate])
+  @@index([accountId])
+}
+
+model Expense {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  accountId     String   @db.Uuid
+  amount        Decimal  @db.Decimal(14, 2)
+  currency      String   @default("INR") @db.VarChar(3)
+  category      String
+  expenseDate   DateTime
+  description   String?
+  paymentMethod String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expenseDate])
+  @@index([accountId])
+}
+
+model SavingsGoal {
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String            @db.Uuid
+  name          String
+  targetAmount  Decimal           @db.Decimal(14, 2)
+  currentAmount Decimal           @default(0) @db.Decimal(14, 2)
+  targetDate    DateTime?
+  status        SavingsGoalStatus @default(ACTIVE)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Investment {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  name           String
+  assetType      String
+  amountInvested Decimal   @db.Decimal(14, 2)
+  currentValue   Decimal   @default(0) @db.Decimal(14, 2)
+  purchaseDate   DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+model NotificationPreference {
+  id        String              @id @default(uuid()) @db.Uuid
+  userId    String              @db.Uuid
+  channel   NotificationChannel
+  /// Notification type (e.g. HABIT_REMINDER, TASK_DUE_SOON) or "ALL"
+  category  String
+  enabled   Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel, category])
+  @@index([userId])
+}
+
+model Notification {
+  id          String               @id @default(uuid()) @db.Uuid
+  userId      String               @db.Uuid
+  type        String
+  title       String
+  message     String
+  priority    NotificationPriority @default(USEFUL)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  readAt      DateTime?
+  status      NotificationStatus   @default(PENDING)
+  metadata    Json?
+  /// Idempotency key so background jobs never create the same reminder twice
+  dedupeKey   String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, status])
+  @@index([status, scheduledAt])
+}

@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/* Theme: system preference by default; [data-theme] on <html> overrides it. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --bg: #f7f3ec;
+  --surface: #fffdf9;
+  --surface-2: #f6f0e7;
+  --surface-3: #efe7db;
+  --border: #e6dccd;
+  --border-strong: #d5c7b4;
+  --text: #2b231c;
+  --text-2: #62564a;
+  --text-3: #6f6356;
+  --accent: #b84a1c;
+  --accent-hover: #9c3e16;
+  --accent-fg: #fffaf4;
+  --accent-soft: #f6e4d6;
+  --success: #2c7341;
+  --success-soft: #e2efe3;
+  --warning: #8f5b00;
+  --warning-soft: #f7ecd2;
+  --danger: #b4352d;
+  --danger-soft: #f8e1de;
+  --ring: rgba(184, 74, 28, 0.35);
+  /* chart slots — validated categorical order (blue, orange, aqua) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --grid: #ece4d8;
+  --shadow: 0 1px 2px rgba(60, 40, 20, 0.04), 0 4px 14px rgba(60, 40, 20, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #171411;
+    --surface: #1f1b17;
+    --surface-2: #27221d;
+    --surface-3: #312b24;
+    --border: #3a332b;
+    --border-strong: #4a4137;
+    --text: #f3ede5;
+    --text-2: #c4b9ac;
+    --text-3: #9a8f82;
+    --accent: #e8743f;
+    --accent-hover: #f08a59;
+    --accent-fg: #1a120c;
+    --accent-soft: #3b261a;
+    --success: #6cc485;
+    --success-soft: #1d2e22;
+    --warning: #e3b04f;
+    --warning-soft: #33291a;
+    --danger: #f08178;
+    --danger-soft: #3a1f1c;
+    --ring: rgba(232, 116, 63, 0.45);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --grid: #322c25;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171411;
+  --surface: #1f1b17;
+  --surface-2: #27221d;
+  --surface-3: #312b24;
+  --border: #3a332b;
+  --border-strong: #4a4137;
+  --text: #f3ede5;
+  --text-2: #c4b9ac;
+  --text-3: #9a8f82;
+  --accent: #e8743f;
+  --accent-hover: #f08a59;
+  --accent-fg: #1a120c;
+  --accent-soft: #3b261a;
+  --success: #6cc485;
+  --success-soft: #1d2e22;
+  --warning: #e3b04f;
+  --warning-soft: #33291a;
+  --danger: #f08178;
+  --danger-soft: #3a1f1c;
+  --ring: rgba(232, 116, 63, 0.45);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --grid: #322c25;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --shadow-card: var(--shadow);
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgba(20, 14, 8, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "lifeos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LifeOS monorepo foundation",
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "npm --prefix apps/api run start:dev",
+    "build:web": "npm --prefix apps/web run build",
+    "build:api": "npm --prefix apps/api run build",
+    "lint:web": "npm --prefix apps/web run lint",
+    "lint:api": "npm --prefix apps/api run lint",
+    "test:web": "npm --prefix apps/web run test",
+    "test:api": "npm --prefix apps/api run test"
+  },
+  "keywords": [
+    "lifeos",
+    "productivity",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "ISC"
+}

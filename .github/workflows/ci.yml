@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: lifeos
+          POSTGRES_USER: lifeos
+          POSTGRES_PASSWORD: lifeos
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U lifeos" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://lifeos:lifeos@localhost:5432/lifeos?schema=public
+      JWT_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      JOBS_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: node prisma/seed.mjs
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run test:e2e
+      - run: npm run build
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  e2e:
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the full stack
+        run: |
+          echo "JWT_SECRET=ci-only-secret-0123456789abcdef0123456789abcdef" > .env
+          echo "APP_URL=http://localhost:8080" >> .env
+          docker compose --profile app up -d --build --wait
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          E2E_BASE_URL=http://localhost:8080 npx playwright test --project=desktop
+      - if: failure()
+        run: docker compose --profile app logs --tail=200
